@@ -1,0 +1,5 @@
+mysql_admin_password = "fake_value"
+alpacas_api_key      = "fake_value"
+alpacas_secret_key   = "fake_value"
+marketstack_api_key  = "fake_value"
+send_grid_api        = "fake_value"
