@@ -14,15 +14,14 @@ All signal functions and market logic are abstracted into separate modules to pr
 
 ---- Disclaimer ----
 
-This script has been scrubbed of all proprietary code. This script is to be used as a Python coding example for the purposes of my portfolio only.
+This script has been scrubbed of all proprietary code. This script is to be used as a Python coding example for the purposes of Tel Woolsey's portfolio only.
 
 ---- Key Components -----
 
 | Module | Purpose |
 |--------|---------|
-| `main.py` | Coordinates the daily processing loop |
-| `utils.py` | Manages secure DB connections |
-| `signals.py` | Contains signal detection logic (modular, abstracted) |
+| `algo_run.py` | Performs a cache clear, updates stock data with intraday data, runs the calculations script |
+| `signals.py` | Contains signal detection logic (not included due to proprietary nature) |
 | `data_fetching.py` | Loads stock history from the cache DB |
 | `zones.py` | Evaluates SPY-based market conditions |
 
@@ -30,6 +29,9 @@ This script has been scrubbed of all proprietary code. This script is to be used
 
 The script uses environment variables for secure DB access:
 
-ALGO_DB_HOST=mysql.host
-ALGO_DB_USER=username
-ALGO_DB_PASSWORD=password
+ALGO_DB_HOST=mysql.host1
+ALGO_DB_USER=algo_db_password
+ALGO_DB_PASSWORD=algo_db_password
+CACHE_DB_HOST=mysql.host2
+CACHE_DB_USER=cache_db_name
+CACHE_DB_PASSWORDcache_db_password
