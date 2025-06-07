@@ -251,7 +251,7 @@ resource "azurerm_mysql_flexible_database" "market_cache" {
   collation           = "utf8_unicode_ci"
 }
 
-# NAT Gateway for outbound internet access (COMMENT OUT TO SAVE COSTS)
+# NAT Gateway for outbound internet access
 resource "azurerm_public_ip" "nat_gateway_ip" {
   name                = "natgw-pip-${var.environment}"
   location            = azurerm_resource_group.algo_functionapp_rg.location
