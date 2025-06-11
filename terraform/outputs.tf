@@ -51,36 +51,6 @@ output "mysql_databases" {
   }
 }
 
-# Networking Outputs
-output "virtual_network_name" {
-  description = "Name of the virtual network"
-  value       = azurerm_virtual_network.algo_vnet.name
-}
-
-output "virtual_network_address_space" {
-  description = "Address space of the virtual network"
-  value       = azurerm_virtual_network.algo_vnet.address_space
-}
-
-output "subnets" {
-  description = "Information about created subnets"
-  value = {
-    algo_subnet = {
-      name             = azurerm_subnet.algo_subnet.name
-      address_prefixes = azurerm_subnet.algo_subnet.address_prefixes
-    }
-    function_subnet = {
-      name             = azurerm_subnet.function_subnet.name
-      address_prefixes = azurerm_subnet.function_subnet.address_prefixes
-    }
-  }
-}
-
-output "nat_gateway_public_ip" {
-  description = "Public IP address of the NAT Gateway"
-  value       = azurerm_public_ip.nat_gateway_ip.ip_address
-}
-
 # Function App Outputs
 output "function_app_name" {
   description = "Name of the Function App"
@@ -100,13 +70,35 @@ output "function_app_identity" {
   }
 }
 
+# NEW: Function App IP Information
+output "function_app_outbound_ips" {
+  description = "Current outbound IP addresses for the Function App"
+  value       = azurerm_linux_function_app.algo_functionapp.outbound_ip_addresses
+}
+
+output "function_app_possible_outbound_ips" {
+  description = "All possible outbound IP addresses for the Function App"
+  value       = azurerm_linux_function_app.algo_functionapp.possible_outbound_ip_addresses
+}
+
+output "function_app_firewall_summary" {
+  description = "Summary of firewall rules created for Function App access"
+  value = {
+    current_ip_rules    = length(local.function_app_outbound_ips)
+    possible_ip_rules   = length(local.unique_possible_ips)
+    total_rules        = length(local.function_app_outbound_ips) + length(local.unique_possible_ips)
+    current_ips        = local.function_app_outbound_ips
+    additional_ips     = local.unique_possible_ips
+  }
+}
+
 output "service_plan_name" {
   description = "Name of the App Service Plan"
   value       = azurerm_service_plan.algo_functionapp_plan.name
 }
 
 output "service_plan_sku" {
-  description = "SKU of the App Service Plan"
+  description = "SKU of the App Service Plan (should be Y1 for consumption)"
   value       = azurerm_service_plan.algo_functionapp_plan.sku_name
 }
 
@@ -139,15 +131,28 @@ output "deployment_timestamp" {
   value       = timestamp()
 }
 
-# Cost Management Information
+# Cost Management Information (UPDATED for consumption plan)
 output "estimated_monthly_cost_notes" {
-  description = "Notes about estimated costs"
+  description = "Notes about estimated costs for consumption plan"
   value = {
-    function_app_plan = "EP1 Elastic Premium: ~$150-200/month"
-    mysql_server     = "B_Standard_B1ms: ~$15-20/month"
-    nat_gateway      = "Standard NAT Gateway: ~$45/month + data processing"
-    storage_account  = "Standard LRS: ~$1-5/month"
-    key_vault       = "Standard: ~$3/month + operations"
-    note            = "Actual costs may vary based on usage patterns"
+    function_app_plan   = "Y1 Consumption: Pay per execution (~$5-20/month depending on usage)"
+    mysql_server       = "B_Standard_B1ms: ~$15-20/month"
+    storage_account    = "Standard LRS: ~$1-5/month"
+    key_vault         = "Standard: ~$3/month + operations"
+    networking        = "No NAT Gateway or VNet costs - included with consumption plan"
+    total_estimate    = "~$25-50/month (massive savings from ~$250/month premium plan)"
+    note              = "Actual costs may vary based on function execution frequency"
+  }
+}
+
+# Security Information
+output "security_summary" {
+  description = "Summary of security implementations"
+  value = {
+    key_vault_secrets     = "All sensitive data stored in Azure Key Vault"
+    mysql_access         = "Public endpoint with specific IP firewall rules"
+    function_app_auth    = "Managed identity for Key Vault access"
+    ssl_enforcement      = "HTTPS-only connections enforced"
+    firewall_approach    = "Dynamic IP whitelisting (no broad 0.0.0.0 rules)"
   }
 }

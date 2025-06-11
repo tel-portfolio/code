@@ -10,7 +10,7 @@ variable "environment" {
   default     = "live"
 }
 
-# MySQL variables (keep password as sensitive variable)
+# MySQL variables
 variable "sql_admin_user" {
   description = "MySQL administrator login name"
   type        = string
@@ -23,7 +23,7 @@ variable "sql_admin_password" {
   sensitive   = true
 }
 
-# Alpaca Trading API (keep as sensitive variables)
+# Alpaca Trading API
 variable "alpaca_api_key" {
   description = "API key for Alpaca trading account (stored in Terraform Cloud as sensitive)"
   type        = string
@@ -57,17 +57,6 @@ variable "alpaca_base_url" {
   default     = "https://paper-api.alpaca.markets"
 }
 
-variable "watchlist_spreadsheet_id" {
-  description = "Google Sheets document ID for the stock watchlist"
-  type        = string
-}
-
-variable "watchlist_range" {
-  description = "Cell range in the watchlist spreadsheet to read (e.g., Sheet1!A2:A100)"
-  type        = string
-  default     = "Sheet1!A2:A100"
-}
-
 variable "email_recipients" {
   description = "Comma-separated list of alert recipient emails"
   type        = string
@@ -77,4 +66,16 @@ variable "simulation_mode" {
   description = "Enable simulation mode for trading logic"
   type        = string
   default     = "true"
+}
+
+# NEW: Optional developer IP for firewall access
+variable "developer_ip" {
+  description = "Developer's public IP address for MySQL access (optional, only used in dev environment)"
+  type        = string
+  default     = ""
+  
+  validation {
+    condition = var.developer_ip == "" || can(regex("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$", var.developer_ip))
+    error_message = "Developer IP must be a valid IPv4 address or empty string."
+  }
 }
