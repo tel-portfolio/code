@@ -178,7 +178,45 @@ resource "azurerm_mysql_flexible_database" "market_cache" {
   collation           = "utf8_unicode_ci"
 }
 
+<<<<<<< HEAD
 # UPDATED: Function App Service Plan - CONSUMPTION PLAN
+=======
+# NAT Gateway for outbound internet access
+resource "azurerm_public_ip" "nat_gateway_ip" {
+  name                = "natgw-pip-${var.environment}"
+  location            = azurerm_resource_group.algo_functionapp_rg.location
+  resource_group_name = azurerm_resource_group.algo_functionapp_rg.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  
+  tags = {
+    environment = var.environment
+  }
+}
+
+resource "azurerm_nat_gateway" "algo_nat" {
+  name                = "natgw-${var.environment}"
+  location            = azurerm_resource_group.algo_functionapp_rg.location
+  resource_group_name = azurerm_resource_group.algo_functionapp_rg.name
+  sku_name           = "Standard"
+  
+  tags = {
+    environment = var.environment
+  }
+}
+
+resource "azurerm_nat_gateway_public_ip_association" "algo_nat_ip" {
+  nat_gateway_id       = azurerm_nat_gateway.algo_nat.id
+  public_ip_address_id = azurerm_public_ip.nat_gateway_ip.id
+}
+
+resource "azurerm_subnet_nat_gateway_association" "function_nat" {
+  subnet_id      = azurerm_subnet.function_subnet.id
+  nat_gateway_id = azurerm_nat_gateway.algo_nat.id
+}
+
+# -- Function App --
+>>>>>>> 52bad86111373b56da129971cfcf26b71562c111
 resource "azurerm_service_plan" "algo_functionapp_plan" {
   name                = "empire-algo-${var.environment}"
   location            = azurerm_resource_group.algo_functionapp_rg.location
