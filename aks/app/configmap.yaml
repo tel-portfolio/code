@@ -1,0 +1,14 @@
+# ---
+# CKAD Study Topic: Understand ConfigMaps
+# This is the resource that holds our configuration data,
+# separate from the application pod.
+# ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # This name is how we will reference it from our Deployment
+  name: flask-app-config
+data:
+  # These are the key-value pairs of configuration
+  # Your app.py is looking for this specific key.
+  WELCOME_MESSAGE: "Hello from a ConfigMap! Day 3 is a success!"
