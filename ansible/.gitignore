@@ -1,0 +1,55 @@
+# --- Secrets (CRITICAL) ---
+# Ignore environment files
+*.env
+
+# Ignore Ansible Vault secret files
+secrets.yml
+vars/secrets.yml
+
+# Ignore Google Cloud service account keys
+google-sheets-access.json
+*.json
+
+
+# --- Python ---
+# Ignore the virtual environment (if you move it inside the project)
+venv/
+.venv/
+
+# Ignore Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+# --- Logs ---
+# Ignore log directories and files
+logs/
+*.log
+cache.log
+
+
+# --- Ansible ---
+# Ignore Ansible inventory files (may contain IPs/usernames)
+inventory
+hosts.ini
+
+# Ignore Ansible retry files
+*.retry
+
+
+# --- OS & Editor ---
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Vim
+*.swp
+*~
