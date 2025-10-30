@@ -1,0 +1,188 @@
+---
+- name: Configure Python Application Server (AlmaLinux)
+  hosts: algo_server
+  become: yes
+
+  # -----------------------------------------------------------------
+  #  VARIABLES
+  # -----------------------------------------------------------------
+  vars:
+    app_user: "telw"
+    project_path: "/home/telw" # This is the user's home directory
+    project_dir: "{{ project_path }}/algo" # Path to the actual project code
+    venv_path: "{{ project_path }}/venv"   # venv in the user's home
+    log_dir: "{{ project_path }}/logs"    # Logs in the user's home
+    git_repo_url: "https://github.com/your_username/your_repo.git"
+
+    # [UPDATED] Python libraries compiled from all your scripts
+    python_libraries:
+      - alpaca-trade-api
+      - diskcache
+      - google-api-python-client
+      - google-auth
+      - google-auth-httplib2
+      - google-auth-oauthlib
+      - mysqlclient
+      - pandas
+      - pandas-market-calendars
+      - pymysql
+      - python-dotenv
+      - requests
+      - sendgrid
+
+    db_name: "my_app_db"
+    db_user: "my_app_db_user"
+    db_password: "CHANGEME_IN_VAULT"
+
+  # -----------------------------------------------------------------
+  #  TASKS
+  # -----------------------------------------------------------------
+  tasks:
+    - name: 1. Install System Packages
+      ansible.builtin.dnf:
+        name:
+          - git
+          - python3
+          - python3-pip
+          - mysql-server
+          - python3-PyMySQL
+          - python3-devel
+          - mysql-devel
+          - dnf-automatic
+        state: present
+
+    - name: 2. Set timezone to Pacific Time
+      community.general.timezone:
+        name: America/Los_Angeles
+
+    - name: 3. Configure dnf-automatic to apply updates
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/automatic.conf
+        regexp: '^apply_updates =.*'
+        line: 'apply_updates = yes'
+      notify: Restart dnf-automatic timer
+
+    - name: 4. Set dnf-automatic to install security updates only
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/automatic.conf
+        regexp: '^upgrade_type =.*'
+        line: 'upgrade_type = security'
+      notify: Restart dnf-automatic timer
+
+    - name: 5. Enable and start dnf-automatic timer
+      ansible.builtin.systemd:
+        name: dnf-automatic.timer
+        state: started
+        enabled: yes
+
+    - name: 6. Ensure MySQL service is running
+      ansible.builtin.service:
+        name: mysqld
+        state: started
+        enabled: yes
+
+    - name: 7. Create the application database
+      community.mysql.mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        login_unix_socket: /var/lib/mysql/mysql.sock
+
+    - name: 8. Create the application database user
+      community.mysql.mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv: "{{ db_name }}.*:ALL"
+        host: 'localhost'
+        state: present
+        login_unix_socket: /var/lib/mysql/mysql.sock
+
+    - name: 9. Create the application user
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        state: present
+        shell: /bin/bash
+        create_home: yes
+
+    - name: 10. Create the project directory (user's home)
+      ansible.builtin.file:
+        path: "{{ project_path }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    # --- TASKS ADDED ---
+
+    - name: 11. Create Python virtualenv and install libraries
+      ansible.builtin.pip:
+        name: "{{ python_libraries }}"
+        state: present
+        virtualenv: "{{ venv_path }}"
+        virtualenv_command: /usr/bin/python3 -m venv
+      become_user: "{{ app_user }}" # Run as 'telw'
+
+    - name: 12. Clone the application code from Git
+      ansible.builtin.git:
+        repo: "{{ git_repo_url }}"
+        dest: "{{ project_dir }}" # Clones to /home/telw/algo
+        version: main
+        force: yes
+      become_user: "{{ app_user }}" # Run as 'telw'
+
+    - name: 13. Create log directory for cron jobs
+      ansible.builtin.file:
+        path: "{{ log_dir }}" # Creates /home/telw/logs
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+      become_user: "{{ app_user }}"
+
+    - name: 14. Add Morning cron job
+      ansible.builtin.cron:
+        name: "Morning Job - run_todays_signals"
+        user: "{{ app_user }}"
+        minute: "30"
+        hour: "7"
+        weekday: "1-5"
+        job: "{{ project_dir }}/bash/run_todays_signals.sh >> {{ log_dir }}/algo.log 2>&1"
+        cron_file: "app-algo-jobs"
+
+    - name: 15. Add Afternoon cron job (port)
+      ansible.builtin.cron:
+        name: "Afternoon Job - run_port"
+        user: "{{ app_user }}"
+        minute: "59"
+        hour: "12"
+        weekday: "1-5"
+        job: "{{ project_dir }}/bash/run_port.sh >> {{ log_dir }}/algo.log 2>&1"
+        cron_file: "app-algo-jobs"
+
+    - name: 16. Add Afternoon cron job (algo)
+      ansible.builtin.cron:
+        name: "Afternoon Job - run_algo"
+        user: "{{ app_user }}"
+        minute: "30"
+        hour: "15"
+        weekday: "1-4"
+        job: "{{ project_dir }}/bash/run_algo.sh >> {{ log_dir }}/algo.log 2>&1"
+        cron_file: "app-algo-jobs"
+
+    - name: 17. Add Sunday cron job (algo)
+      ansible.builtin.cron:
+        name: "Sunday Job - run_algo"
+        user: "{{ app_user }}"
+        minute: "5"
+        hour: "8"
+        weekday: "0"
+        job: "{{ project_dir }}/bash/run_algo.sh >> {{ log_dir }}/algo.log 2>&1"
+        cron_file: "app-algo-jobs"
+
+  # -----------------------------------------------------------------
+  #  HANDLERS
+  # -----------------------------------------------------------------
+  handlers:
+    - name: Restart dnf-automatic timer
+      ansible.builtin.systemd:
+        name: dnf-automatic.timer
+        state: restarted
