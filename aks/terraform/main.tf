@@ -42,6 +42,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
         vnet_subnet_id = azurerm_subnet.aks_subnet.id
     }
 
+    #Define internal network for cluster
+    network_profile {
+        network_plugin = "kubenet"
+        service_cidr = "10.1.0.0/16"
+        dns_service_ip = "10.1.0.10"
+        docker_bridge_cidr = "172.17.0.1/16"
+    }
+
     # Assign Managed Identity to cluster
     identity {
         type = "SystemAssigned"
