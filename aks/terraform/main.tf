@@ -3,74 +3,40 @@ resource "azurerm_resource_group" "rg" {
     location = var.location
 }
 
-# Private Azure Container Registry
-resource "azurerm_container_registry" "acr" {
-    name = "${var.prefix}acr"
-    resource_group_name = azurerm_resource_group.rg.name
-    location = azurerm_resource_group.rg.location
-    sku = "Basic"
-    admin_enabled = true
-}
-
-# Virtual Network
-resource "azurerm_virtual_network" "vnet" {
-    name = "${var.prefix}-vnet"
-    address_space = ["10.0.0.0/16"]
+module "virtual_network" {
+    source = "./modules/network"
     location = azurerm_resource_group.rg.location
     resource_group_name = azurerm_resource_group.rg.name
+    prefix = var.prefix
 }
 
-# Vnet Subnet
-resource "azurerm_subnet" "aks_subnet" {
-    name = "aks-subnet"
-    resource_group_name = azurerm_resource_group.rg.name
-    virtual_network_name = azurerm_virtual_network.vnet.name
-    address_prefixes = ["10.0.1.0/24"]
-}
-
-# AKS Cluster
-resource "azurerm_kubernetes_cluster" "aks" {
-    name = "${var.prefix}-aks-cluster"
+module "azure_container_registry" {
+    source = "./modules/acr"
     location = azurerm_resource_group.rg.location
     resource_group_name = azurerm_resource_group.rg.name
-    dns_prefix = "${var.prefix}-aks"
+    prefix = var.prefix
+}
 
-    default_node_pool {
-        name = "default"
-        node_count = 1
-        vm_size = "Standard_B2s"
-        vnet_subnet_id = azurerm_subnet.aks_subnet.id
-    }
+module "aks_cluster" {
+    source = "./modules/aks"
+    location = azurerm_resource_group.rg.location
+    resource_group_name = azurerm_resource_group.rg.name
+    prefix = var.prefix
 
-    #Define internal network for cluster
-    network_profile {
-        network_plugin = "kubenet"
-        service_cidr = "10.1.0.0/16"
-        dns_service_ip = "10.1.0.10"
-        docker_bridge_cidr = "172.17.0.1/16"
-    }
-
-    # Assign Managed Identity to cluster
-    identity {
-        type = "SystemAssigned"
-    }
-
-    #Setup RBAC to allow Cluster to pull image from private registry
-    role_based_access_control_enabled = true
-    azure_policy_enabled = true
+    subnet_id = module.virtual_network.subnet_id
     
     depends_on = [
-        azurerm_container_registry.acr
+        module.azure_container_registry
     ]
 }
 
 # Give AKS cluster identity 'ArcPull' role on the ACR
 resource "azurerm_role_assignment" "aks_acr_pull" {
-  scope                = azurerm_container_registry.acr.id
+  scope                = module.azure_container_registry.acr_id
   role_definition_name = "AcrPull"
-  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  principal_id         = module.aks_cluster.aks_identity_principal_id
   
   depends_on = [
-    azurerm_kubernetes_cluster.aks
+    module.aks_cluster
   ]
 }

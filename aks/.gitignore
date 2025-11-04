@@ -7,9 +7,15 @@
 .terraform/
 .terraform.lock.hcl
 terraform.tfstate.backup
+../terraform.tfstate
 
 *.tfstate
 .tfstate..backup
+
+*.auto.tfvars
+*.auto.tfvars.json
+.terraformrc
+terraform.rc
 
 # Terraform crash logs
 

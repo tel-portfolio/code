@@ -15,3 +15,9 @@ variable "resource_group_name" {
   type        = string
   default     = "aks-pipeline-rg"
 }
+
+variable "image_tag" {
+  description = "Tag for container image"
+  type = string
+  default = "latest"
+}
